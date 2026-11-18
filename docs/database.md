@@ -1,0 +1,42 @@
+# Database and view contracts
+
+Use a fresh MySQL 8.4 database called `extra_credit`. Draw the updated ER diagram from the relationships below. The submitted design is the starting point for the five core tables and ten view ideas. Role, active status, school, campus, currency, and forecast history support the revised app. Keep the existing table and ID spelling consistent, including on case-sensitive installations.
+
+## Tables and relationships
+
+| File and table | Columns and constraints |
+| --- | --- |
+| `00_database.sql` | Create and select the `extra_credit` development database with utf8mb4. Document how to make a separate test database. DDL and seed scripts subsequent to this one should run against the selected database without hard-coded schema prefixes. |
+| `01_students.sql` · `Students` | `student_id` unsigned integer auto-increment PK, `full_name` VARCHAR(100), `email` VARCHAR(150) UNIQUE, `password_hash` VARCHAR(255), `school_name` VARCHAR(150), `role` ENUM user/admin default user, `is_active` BOOLEAN default true. All required. The registration checkbox is a required application input. |
+| `02_categories.sql` · `Categories` | `category_id` unsigned integer auto-increment PK, `category_name` VARCHAR(100) UNIQUE and required. |
+| `03_listings.sql` · `Listings` | `listing_id` unsigned integer auto-increment PK, `seller_id` FK → Students, `category_id` FK → Categories, `title` VARCHAR(150), optional `description` TEXT, `price` DECIMAL(10,2) CHECK nonnegative, `currency_code` CHAR(3) CHECK supported currency, `item_condition` ENUM New / Like New / Good / Fair / Poor, `listing_status` ENUM Available / Reserved / Sold / Removed default Available, `campus_name` VARCHAR(150), `date_posted` DATETIME default CURRENT_TIMESTAMP. All required except description. Restrict deletes on both FKs. Enforce whole JPY amounts. |
+| `04_listing_images.sql` · `Listing_Images` | `image_id` unsigned integer auto-increment PK, `listing_id` FK → Listings with ON DELETE CASCADE, `image_path` VARCHAR(255) UNIQUE, required, stores a generated file key. |
+| `05_purchase_inquiries.sql` · `Purchase_Inquiries` | `inquiry_id` unsigned integer auto-increment PK, `listing_id` FK → Listings, `buyer_id` FK → Students, `pickup_location` VARCHAR(150), `payment_method` VARCHAR(50), `preferred_date` DATE, `inquiry_status` ENUM Pending / Accepted / Declined / Withdrawn default Pending, `submitted_at` DATETIME default CURRENT_TIMESTAMP. All required. Restrict deletes on both FKs. |
+| `06_pickup_forecasts.sql` · `Pickup_Forecasts` | `snapshot_id` unsigned integer auto-increment PK, `student_id` FK → Students with delete restriction, `place_label` VARCHAR(150), `latitude` DECIMAL(7,4), `longitude` DECIMAL(7,4), `forecast_date` DATE, `max_temp_c` DECIMAL(5,2), `precip_probability` unsigned tiny integer with maximum 100, `fetched_at` DATETIME default CURRENT_TIMESTAMP. All required. |
+
+All IDs used in FKs have matching types. The original table relationships use ON UPDATE CASCADE. Keep seeded IDs stable, use fictional addresses and sample records, and document a safe clean rebuild that targets the development or test database only. Apply schema files in order, then seed and view files. Use at least six rows per original relation, with an unused category, an inactive person, available listings with and without image rows, multiple interest states, and two currencies on varied categories. Seed photo keys can intentionally lack real bytes, with placeholders in the UI. Exercise all required report cases with synthetic data. Forecast records from a live response and any test fixtures are distinguishable in notes.
+
+Important indexes to consider in the performance ticket include `Listings(listing_status, date_posted, listing_id)`, `Purchase_Inquiries(listing_id, inquiry_status, buyer_id)`, and `Pickup_Forecasts(student_id, fetched_at, snapshot_id)`. Start with a baseline EXPLAIN. An index earns its place when there is evidence that it helps a real query. [MySQL EXPLAIN](https://dev.mysql.com/doc/refman/8.4/en/explain.html) · [Locking reads](https://dev.mysql.com/doc/refman/8.4/en/innodb-locking-reads.html)
+
+## Phase II views
+
+One file per view under `sql/views/`. Give each view a descriptive comment and query it in deterministic order for evidence. The app reports are admin-only, so submitted private columns can stay in relevant report views. General listing and inquiry endpoints use their own smaller, permission-scoped queries.
+
+| View and report key | Expected result | Sort |
+| --- | --- | --- |
+| 1 · `v_listing_details` · `listing-details` | Three-way join of listings, students, and categories. `listing_id`, `title`, `seller_name`, `category_name`, `price`, `currency_code`, `item_condition`, `listing_status`. | listing_id |
+| 2 · `v_seller_price_comparison` · `seller-price-comparison` | Seller average is greater than ANY populated category average in the same currency. Use nested ANY and GROUP BY. `student_id`, `seller_name`, `currency_code`, `listing_count`, `average_price`. | student_id, currency_code |
+| 3 · `v_above_category_average` · `above-category-average` | Correlated subquery checks a listing against its own category and currency. `listing_id`, `title`, `category_name`, `price`, `currency_code`. | listing_id |
+| 4 · `v_listing_inquiry_overview` · `listing-inquiry-overview` | Full outer join equivalent using LEFT JOIN plus unmatched rows from RIGHT JOIN combined by UNION ALL. `listing_id`, `title`, `listing_status`, `inquiry_id`, `buyer_id`, `inquiry_status`. A valid FK means the unmatched-inquiry arm is empty on real data. Compare to an independent scratch case with matches and unmatched rows on both sides. TA approval was pending when this plan was written. | listing_id, inquiry_id |
+| 5 · `v_active_students` · `active-students` | Nested UNION yields one row per student with listing or inquiry history, independently of the account's current active status. `student_id`, `full_name`, `email`. | student_id |
+| 6 · `v_available_listings` · `available-listings` | Available listings with their category and seller contact, for admin eyes. `listing_id`, `title`, `category_name`, `price`, `currency_code`, `item_condition`, `seller_name`, `seller_email`. | currency_code, price, listing_id |
+| 7 · `v_category_summary` · `category-summary` | Count and average by category and currency. An empty category is one row with zero and NULL for currency and average. `category_id`, `category_name`, `currency_code`, `listing_count`, `average_price`. | category_id, currency_code |
+| 8 · `v_pending_inquiries` · `pending-inquiries` | Pending rows with both names and pickup date. `inquiry_id`, `listing_title`, `buyer_name`, `seller_name`, `pickup_location`, `preferred_date`. | inquiry_id |
+| 9 · `v_available_without_images` · `available-without-images` | Available listings where NOT EXISTS a photo row. `listing_id`, `title`, `seller_name`, `price`, `currency_code`. | listing_id |
+| 10 · `v_student_selling_summary` · `student-selling-summary` | Count total, available, and sold listings per student including students with zero. `student_id`, `full_name`, `total_listings`, `available_listings`, `sold_listings`. | student_id |
+
+Catalog reports show views 1, 3, 6, 7, 9. Activity reports show 2, 4, 5, 8, 10. Chart query uses category names and the sum of the category summary listing counts across currencies, including zero. Count totals can combine currencies. Average prices cannot. [MySQL JOIN](https://dev.mysql.com/doc/refman/8.4/en/join.html) · [MySQL ANY](https://dev.mysql.com/doc/refman/8.4/en/any-in-some-subqueries.html) · [MySQL aggregate functions](https://dev.mysql.com/doc/refman/8.4/en/aggregate-functions.html)
+
+## Transaction boundaries
+
+Creating, editing or deciding an inquiry, selling/removing a listing, and writing listing images acquire the listing lock before reading status or changing dependents. Re-read mutable state and permissions while holding the appropriate locks. To look up an inquiry's listing, first read its stable listing ID, then lock the listing and re-read/lock the inquiry. All changes for a single user action commit together. Acceptance records Accepted, changes Available to Reserved, and declines remaining Pending rows. A decline or withdrawal leaves the listing alone. Closing a listing closes remaining Pending rows and preserves history. Deactivation prevents access and hides public listings by joining seller active status. It does not physically delete account history.
