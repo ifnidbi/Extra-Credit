@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Browse listings · ExtraCredit{% endblock %}
+{% block content %}
+<h1>Browse listings</h1>
+<form id="search" class="filters" action="{{ url_for('catalog.index') }}" method="get">
+    <label>Search <input type="search" name="q" maxlength="150" value="{{ request.args.get('q', '') }}" placeholder="Books, desks, and more"></label>
+    <label>Campus <input name="campus" maxlength="150" value="{{ request.args.get('campus', '') }}"></label>
+    <label>Category
+        <select name="category_id">
+            <option value="">All categories</option>
+            {% for category in categories %}
+                <option value="{{ category.category_id }}" {% if request.args.get('category_id') == category.category_id|string %}selected{% endif %}>{{ category.category_name }}</option>
+            {% endfor %}
+        </select>
+    </label>
+    <label>Condition
+        <select name="condition">
+            <option value="">All conditions</option>
+            {% for condition in conditions %}
+                <option {% if request.args.get('condition') == condition %}selected{% endif %}>{{ condition }}</option>
+            {% endfor %}
+        </select>
+    </label>
+    <label>Currency
+        <select name="currency">
+            <option value="">All currencies</option>
+            {% for currency in currencies %}
+                <option {% if request.args.get('currency') == currency %}selected{% endif %}>{{ currency }}</option>
+            {% endfor %}
+        </select>
+    </label>
+    <label>Min price <input type="number" name="min_price" min="0" step=".01" value="{{ request.args.get('min_price', '') }}"></label>
+    <label>Max price <input type="number" name="max_price" min="0" step=".01" value="{{ request.args.get('max_price', '') }}"></label>
+    <button>Search</button>
+</form>
+<p id="search-message" role="status"></p>
+<div class="table-wrap">
+    <table>
+        <thead><tr><th scope="col">Item</th><th scope="col">Price</th><th scope="col">Condition</th>
+            <th scope="col">Category</th><th scope="col">Campus</th></tr></thead>
+        <tbody id="listing-rows">
+            {% for item in result['items'] %}
+                <tr><td><a href="{{ url_for('catalog.detail', listing_id=item.listing_id) }}">{{ item.title }}</a></td>
+                    <td>{{ item.price }} {{ item.currency_code }}</td><td>{{ item.item_condition }}</td>
+                    <td>{{ item.category_name }}</td><td>{{ item.campus_name }}</td></tr>
+            {% else %}
+                <tr><td colspan="5">No listings found.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+<p id="listing-pages" data-page="{{ result.page }}">
+    {% set filters = request.args.to_dict() %}
+    {% if result.page > 1 %}<a data-page="{{ result.page - 1 }}" href="{{ url_for('catalog.index', **dict(filters, page=result.page - 1)) }}">Previous</a>{% endif %}
+    <span>Page {{ result.page }}</span>
+    {% if result.has_next %}<a data-page="{{ result.page + 1 }}" href="{{ url_for('catalog.index', **dict(filters, page=result.page + 1)) }}">Next</a>{% endif %}
+</p>
+{% endblock %}

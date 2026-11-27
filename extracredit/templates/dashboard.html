@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}My listings · ExtraCredit{% endblock %}
+{% block content %}
+<h1>My listings</h1>
+<p><a class="button" href="{{ url_for('catalog.editor') }}">New listing</a></p>
+<div class="table-wrap">
+<table>
+    <thead><tr><th>Item</th><th>Price</th><th>Campus</th><th>Status</th><th>Actions</th></tr></thead>
+    <tbody>
+        {% for item in listings %}
+        <tr data-listing-row>
+            <td><a href="{{ url_for('catalog.detail', listing_id=item.listing_id) }}">{{ item.title }}</a></td>
+            <td>{{ item.price }} {{ item.currency_code }}</td><td>{{ item.campus_name }}</td>
+            <td data-state>{{ item.listing_status }}</td>
+            <td>
+                {% if item.listing_status in ['Available', 'Reserved'] %}
+                <a data-active href="{{ url_for('catalog.editor', listing_id=item.listing_id) }}">Edit</a>
+                <form data-active data-api-form="/api/listings/{{ item.listing_id }}/status" data-method="PUT" data-action="sold">
+                    <input type="hidden" name="listing_status" value="Sold"><button>Mark sold</button>
+                    <p role="status" data-message></p>
+                </form>
+                {% endif %}
+                {% if item.listing_status != 'Removed' %}
+                <form data-api-form="/api/listings/{{ item.listing_id }}" data-method="DELETE" data-action="remove"
+                      data-confirm="Remove this listing from the catalog?">
+                    <button>Remove</button><p role="status" data-message></p>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5">You have no listings yet.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endblock %}

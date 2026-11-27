@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Pickup weather · ExtraCredit{% endblock %}
+{% block content %}
+<h1>Pickup weather</h1>
+<form class="stack narrow" id="weather-search">
+    <label>City <input type="search" name="q" minlength="3" maxlength="100" required></label>
+    <button>Find a city</button>
+</form>
+<form class="stack narrow" id="weather-save" hidden>
+    <label>Matching cities <select name="place" required></select></label>
+    <button>Get and save forecast</button>
+</form>
+<p id="weather-message" role="status"></p>
+<h2>Recent forecasts</h2>
+<div class="table-wrap">
+<table>
+    <thead><tr><th>City</th><th>Forecast date</th><th>High</th><th>Chance of rain</th></tr></thead>
+    <tbody id="weather-rows"></tbody>
+</table>
+</div>
+<p class="muted">Weather by <a href="https://open-meteo.com/">Open-Meteo</a> · Location data by <a href="https://www.geonames.org/">GeoNames</a></p>
+{% endblock %}

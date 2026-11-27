@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}{{ listing.title }} · ExtraCredit{% endblock %}
+{% block content %}
+<p><a href="{{ url_for('catalog.index') }}">Back to listings</a></p>
+<h1>{{ listing.title }}</h1>
+<p class="price">{{ listing.price }} {{ listing.currency_code }}</p>
+<p>{{ listing.listing_status }} · {{ listing.item_condition }} · {{ listing.category_name }}</p>
+<p>{{ listing.campus_name }} · Listed by {{ listing.seller_name }}</p>
+<p class="description">{{ listing.description or 'No description provided.' }}</p>
+<div class="photos">
+    {% for photo in photos if photo.exists %}
+        <img src="{{ photo.media_url }}" alt="Photo {{ loop.index }} of {{ listing.title }}">
+    {% else %}
+        <p class="muted">No photos available.</p>
+    {% endfor %}
+</div>
+{% set user = viewer() %}
+{% if user and user.student_id == listing.seller_id and listing.listing_status in ['Available', 'Reserved'] %}
+<p><a href="{{ url_for('catalog.editor', listing_id=listing.listing_id) }}">Edit listing</a></p>
+{% elif user and listing.listing_status == 'Available' and listing.seller_active %}
+<h2>Request pickup</h2>
+<form class="stack narrow" data-api-form="/api/inquiries" data-method="POST" data-success="Pickup inquiry sent." data-action="clear">
+    <input type="hidden" name="listing_id" value="{{ listing.listing_id }}">
+    <label>Pickup location <input name="pickup_location" maxlength="150" required></label>
+    <label>Payment preference <select name="payment_method" required><option value="">Choose one</option><option>Cash</option><option>E-transfer</option><option>Other</option></select></label>
+    <label>Preferred date <input name="preferred_date" type="date" required></label>
+    <button>Send inquiry</button>
+    <p role="status" data-message></p>
+</form>
+{% elif not user and listing.listing_status == 'Available' %}
+<p><a href="{{ url_for('accounts.login') }}">Sign in</a> to request pickup.</p>
+{% endif %}
+{% if user and user.role == 'admin' and user.student_id != listing.seller_id and listing.listing_status != 'Removed' %}
+<form data-api-form="/api/listings/{{ listing.listing_id }}" data-method="DELETE" data-action="browse"
+      data-confirm="Remove this listing from the catalog?">
+    <button>Remove listing</button><p role="status" data-message></p>
+</form>
+{% endif %}
+{% endblock %}

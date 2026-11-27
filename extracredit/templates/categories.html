@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Categories · ExtraCredit{% endblock %}
+{% block content %}
+<h1>Categories</h1>
+<form class="stack narrow" data-api-form="/api/categories" data-method="POST"
+      data-action="add-category" data-success="Category added.">
+    <label>New category <input name="category_name" maxlength="100" required></label>
+    <button>Add category</button>
+    <p role="status" data-message></p>
+</form>
+<h2>Existing categories</h2>
+<div id="categories">
+    {% for category in categories %}
+    <div class="category" data-category>
+        <form data-api-form="/api/categories/{{ category.category_id }}" data-method="PUT" data-success="Category renamed.">
+            <label>Name <input name="category_name" maxlength="100" value="{{ category.category_name }}" required></label>
+            <button>Rename</button><p role="status" data-message></p>
+        </form>
+        <form data-api-form="/api/categories/{{ category.category_id }}" data-method="DELETE" data-action="delete-category">
+            <button>Remove</button><p role="status" data-message></p>
+        </form>
+    </div>
+    {% endfor %}
+</div>
+<template id="category-template">
+    <div class="category" data-category>
+        <form data-api-form="" data-method="PUT" data-success="Category renamed.">
+            <label>Name <input name="category_name" maxlength="100" required></label>
+            <button>Rename</button><p role="status" data-message></p>
+        </form>
+        <form data-api-form="" data-method="DELETE" data-action="delete-category">
+            <button>Remove</button><p role="status" data-message></p>
+        </form>
+    </div>
+</template>
+{% endblock %}

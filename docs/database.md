@@ -1,6 +1,6 @@
 # Database and view contracts
 
-Use a fresh MySQL 8.4 database called `extra_credit`. Draw the updated ER diagram from the relationships below. The submitted design is the starting point for the five core tables and ten view ideas. Role, active status, school, campus, currency, and forecast history support the revised app. Keep the existing table and ID spelling consistent, including on case-sensitive installations.
+Use a fresh MySQL 8.4 database called `extra_credit`. The ER diagram below shows the implemented relationships. The submitted design is the starting point for the five core tables and ten view ideas. Role, active status, school, campus, currency, and forecast history support the revised app. Keep the existing table and ID spelling consistent, including on case-sensitive installations.
 
 ## Tables and relationships
 
@@ -16,7 +16,7 @@ Use a fresh MySQL 8.4 database called `extra_credit`. Draw the updated ER diagra
 
 All IDs used in FKs have matching types. The original table relationships use ON UPDATE CASCADE. Keep seeded IDs stable, use fictional addresses and sample records, and document a safe clean rebuild that targets the development or test database only. Apply schema files in order, then seed and view files. Use at least six rows per original relation, with an unused category, an inactive person, available listings with and without image rows, multiple interest states, and two currencies on varied categories. Seed photo keys can intentionally lack real bytes, with placeholders in the UI. Exercise all required report cases with synthetic data. Forecast records from a live response and any test fixtures are distinguishable in notes.
 
-Important indexes to consider in the performance ticket include `Listings(listing_status, date_posted, listing_id)`, `Purchase_Inquiries(listing_id, inquiry_status, buyer_id)`, and `Pickup_Forecasts(student_id, fetched_at, snapshot_id)`. Start with a baseline EXPLAIN. An index earns its place when there is evidence that it helps a real query. [MySQL EXPLAIN](https://dev.mysql.com/doc/refman/8.4/en/explain.html) · [Locking reads](https://dev.mysql.com/doc/refman/8.4/en/innodb-locking-reads.html)
+The schema includes `idx_listing_status_currency_date` on `Listings(listing_status, currency_code, date_posted, listing_id)`. It supports filtered catalog reads that select a currency and sort newest first. See the [measured comparison](performance.md). [MySQL EXPLAIN](https://dev.mysql.com/doc/refman/8.4/en/explain.html) · [Locking reads](https://dev.mysql.com/doc/refman/8.4/en/innodb-locking-reads.html)
 
 ## Phase II views
 
@@ -40,3 +40,54 @@ Catalog reports show views 1, 3, 6, 7, 9. Activity reports show 2, 4, 5, 8, 10. 
 ## Transaction boundaries
 
 Creating, editing or deciding an inquiry, selling/removing a listing, and writing listing images acquire the listing lock before reading status or changing dependents. Re-read mutable state and permissions while holding the appropriate locks. To look up an inquiry's listing, first read its stable listing ID, then lock the listing and re-read/lock the inquiry. All changes for a single user action commit together. Acceptance records Accepted, changes Available to Reserved, and declines remaining Pending rows. A decline or withdrawal leaves the listing alone. Closing a listing closes remaining Pending rows and preserves history. Deactivation prevents access and hides public listings by joining seller active status. It does not physically delete account history.
+
+## Entity relationship diagram
+
+```mermaid
+erDiagram
+    Students ||--o{ Listings : posts
+    Categories ||--o{ Listings : groups
+    Listings ||--o{ Listing_Images : has
+    Listings ||--o{ Purchase_Inquiries : receives
+    Students ||--o{ Purchase_Inquiries : sends
+    Students ||--o{ Pickup_Forecasts : saves
+
+    Students {
+        int student_id PK
+        varchar email UK
+        varchar school_name
+        enum role
+        boolean is_active
+    }
+    Categories {
+        int category_id PK
+        varchar category_name UK
+    }
+    Listings {
+        int listing_id PK
+        int seller_id FK
+        int category_id FK
+        decimal price
+        char currency_code
+        enum listing_status
+    }
+    Listing_Images {
+        int image_id PK
+        int listing_id FK
+        varchar image_path UK
+    }
+    Purchase_Inquiries {
+        int inquiry_id PK
+        int listing_id FK
+        int buyer_id FK
+        date preferred_date
+        enum inquiry_status
+    }
+    Pickup_Forecasts {
+        int snapshot_id PK
+        int student_id FK
+        date forecast_date
+        decimal max_temp_c
+        int precip_probability
+    }
+```

@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Inquiries · ExtraCredit{% endblock %}
+{% block content %}
+<h1>{{ 'Incoming' if direction == 'incoming' else 'Outgoing' }} inquiries</h1>
+<p><a href="{{ url_for('inquiries.page', direction='incoming') }}">Incoming</a>
+    · <a href="{{ url_for('inquiries.page', direction='outgoing') }}">Outgoing</a></p>
+{% for inquiry in inquiries %}
+<article data-inquiry-row data-listing="{{ inquiry.listing_id }}">
+    <h2>{{ inquiry.listing_title }}</h2>
+    <p><span data-state>{{ inquiry.inquiry_status }}</span> ·
+        {{ inquiry.buyer_name if direction == 'incoming' else inquiry.seller_name }} ·
+        <a href="mailto:{{ inquiry.other_party_email|urlencode }}">Email {{ 'buyer' if direction == 'incoming' else 'seller' }}</a></p>
+    <p data-pickup>{{ inquiry.pickup_location }} · {{ inquiry.preferred_date }} · {{ inquiry.payment_method }}</p>
+    {% if inquiry.inquiry_status == 'Pending' and direction == 'outgoing' %}
+        <form class="stack narrow" data-pending data-api-form="/api/inquiries/{{ inquiry.inquiry_id }}" data-method="PUT" data-action="edit-inquiry">
+            <label>Pickup location <input name="pickup_location" value="{{ inquiry.pickup_location }}" maxlength="150" required></label>
+            <label>Preferred date <input type="date" name="preferred_date" value="{{ inquiry.preferred_date }}" required></label>
+            <label>Payment preference
+                <select name="payment_method">
+                    {% for method in payment_methods %}<option {% if method == inquiry.payment_method %}selected{% endif %}>{{ method }}</option>{% endfor %}
+                </select>
+            </label>
+            <button>Update pickup plan</button><p role="status" data-message></p>
+        </form>
+        <form data-pending data-api-form="/api/inquiries/{{ inquiry.inquiry_id }}" data-method="DELETE" data-action="withdraw">
+            <button>Withdraw inquiry</button><p role="status" data-message></p>
+        </form>
+    {% elif inquiry.inquiry_status == 'Pending' %}
+        <form data-pending data-api-form="/api/inquiries/{{ inquiry.inquiry_id }}/decision" data-method="PUT" data-action="decision">
+            <button name="decision" value="Accepted">Accept</button>
+            <button name="decision" value="Declined">Decline</button>
+            <p role="status" data-message></p>
+        </form>
+    {% endif %}
+</article>
+{% else %}
+<p>No {{ direction }} inquiries.</p>
+{% endfor %}
+{% endblock %}

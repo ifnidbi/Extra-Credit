@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Register' if register else 'Sign in' }} · ExtraCredit{% endblock %}
+{% block content %}
+<h1>{{ 'Create a student account' if register else 'Sign in' }}</h1>
+{% if request.args.get('registered') and not register %}
+<p role="status">Account created. Sign in to continue.</p>
+{% endif %}
+{% if error %}<p class="error" role="alert">{{ error.message }}</p>{% endif %}
+<form class="stack narrow" method="post">
+    <input name="csrf_token" type="hidden" value="{{ csrf_token() }}">
+    {% if register %}
+        <label>Full name <input name="full_name" maxlength="100" autocomplete="name" required value="{{ request.form.get('full_name', '') }}"></label>
+        <label>School <input name="school_name" maxlength="150" autocomplete="organization" required value="{{ request.form.get('school_name', '') }}"></label>
+    {% endif %}
+    <label>Email <input name="email" type="email" maxlength="150" autocomplete="email" required value="{{ request.form.get('email', '') }}"></label>
+    <label>Password <input name="password" type="password" autocomplete="{{ 'new-password' if register else 'current-password' }}"
+        {% if register %}minlength="12"{% endif %} maxlength="128" required></label>
+    {% if register %}
+        <label class="inline"><input name="student_attested" type="checkbox" value="yes" required
+            {% if request.form.get('student_attested') %}checked{% endif %}> I am a student.</label>
+    {% endif %}
+    <button>{{ 'Register' if register else 'Sign in' }}</button>
+</form>
+{% endblock %}

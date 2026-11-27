@@ -1,0 +1,42 @@
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; color: #222; background: #fff; font: 1rem/1.5 system-ui, sans-serif; }
+header { background: #eef2f5; border-bottom: 1px solid #cbd5de; }
+nav, main { max-width: 1050px; margin: auto; padding: 1rem; }
+nav { display: flex; align-items: center; flex-wrap: wrap; gap: .75rem 1rem; }
+.brand { font-size: 1.2rem; font-weight: bold; }
+a { color: #104e82; }
+nav a { text-decoration: none; }
+nav a:hover { text-decoration: underline; }
+h1 { font-size: 1.8rem; margin: .5rem 0 1rem; }
+h2 { font-size: 1.25rem; margin: 1.2rem 0 .5rem; }
+p { margin: .5rem 0 .8rem; }
+label { display: block; }
+label > input, label > select, label > textarea { display: block; width: 100%; }
+.inline input { display: inline; width: auto; }
+input, select, textarea, button, .button { font: inherit; border: 1px solid #8594a0; padding: .4rem .6rem; border-radius: 3px; }
+button, .button { color: #13364f; background: #edf3f8; text-decoration: none; cursor: pointer; }
+button:disabled { cursor: wait; opacity: .65; }
+:focus-visible { outline: 2px solid #165d9b; outline-offset: 2px; }
+.stack { display: grid; gap: .6rem; justify-items: start; margin-bottom: 1rem; }
+.stack label { width: 100%; }
+.narrow { max-width: 420px; }
+.filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: .65rem; align-items: end; }
+.table-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; }
+th, td { border: 1px solid #cbd5de; padding: .5rem .6rem; text-align: left; vertical-align: top; }
+th { background: #eef2f5; }
+td form { display: inline-block; }
+#listing-pages { display: flex; gap: 1rem; }
+section, article, .category { margin-bottom: 1.25rem; }
+article, .category { padding: .6rem .85rem; border: 1px solid #d7dee4; }
+.category { display: flex; flex-wrap: wrap; align-items: end; gap: .5rem; }
+.category label { display: inline-block; }
+.error { color: #a32222; }
+.muted { color: #4a5560; }
+.price { font-size: 1.25rem; font-weight: bold; }
+.description { white-space: pre-wrap; }
+.photos { display: flex; flex-wrap: wrap; gap: .75rem; }
+.photos img { width: 200px; height: 150px; object-fit: contain; background: #eef2f5; display: block; }
+.chart { max-width: 650px; min-height: 1rem; }
+[data-message]:empty, [role="status"]:empty { display: none; }

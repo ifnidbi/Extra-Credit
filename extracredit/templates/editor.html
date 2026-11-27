@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit listing' if listing else 'New listing' }} · ExtraCredit{% endblock %}
+{% block content %}
+<h1>{{ 'Edit listing' if listing else 'New listing' }}</h1>
+<form class="stack narrow" data-api-form="/api/listings{{ '/' ~ listing.listing_id if listing else '' }}"
+      data-method="{{ 'PUT' if listing else 'POST' }}" data-action="listing">
+    <label>Title <input name="title" maxlength="150" required value="{{ listing.title if listing else '' }}"></label>
+    <label>Description <textarea name="description" maxlength="5000" rows="4">{{ listing.description or '' if listing else '' }}</textarea></label>
+    <label>Campus <input name="campus_name" maxlength="150" required value="{{ listing.campus_name if listing else viewer().school_name }}"></label>
+    <label>Price <input name="price" type="number" min="0" max="99999999.99" step=".01" required value="{{ listing.price if listing else '' }}"></label>
+    <label>Currency
+        <select name="currency_code">
+            {% for currency in currencies %}<option {% if listing and listing.currency_code == currency %}selected{% endif %}>{{ currency }}</option>{% endfor %}
+        </select>
+    </label>
+    <label>Condition
+        <select name="item_condition">
+            {% for condition in conditions %}<option {% if listing and listing.item_condition == condition %}selected{% endif %}>{{ condition }}</option>{% endfor %}
+        </select>
+    </label>
+    <label>Category
+        <select name="category_id" required>
+            <option value="">Choose a category</option>
+            {% for category in categories %}
+                <option value="{{ category.category_id }}"
+                    {% if listing and listing.category_id == category.category_id %}selected{% endif %}>{{ category.category_name }}</option>
+            {% endfor %}
+        </select>
+    </label>
+    <button>{{ 'Save changes' if listing else 'Create listing' }}</button>
+    <p role="status" data-message></p>
+</form>
+{% if listing %}
+<h2>Photos</h2>
+<p>Up to five JPEG or PNG photos, 3 MiB each.</p>
+<form class="stack narrow" data-api-form="/api/listings/{{ listing.listing_id }}/images" data-method="POST"
+      data-action="upload" data-file-form>
+    <label>Photo <input name="photo" type="file" accept="image/jpeg,image/png" required></label>
+    <button>Upload photo</button>
+    <p role="status" data-message></p>
+</form>
+<div class="photos" id="edit-photos" data-listing="{{ listing.listing_id }}">
+    {% for photo in photos %}
+        <div data-photo>
+            {% if photo.exists %}<img src="{{ photo.media_url }}" alt="Photo of {{ listing.title }}">
+            {% else %}<p>Photo unavailable</p>{% endif %}
+            <form data-api-form="/api/listings/{{ listing.listing_id }}/images/{{ photo.image_id }}" data-method="DELETE" data-action="delete-photo">
+                <button>Remove photo</button><p role="status" data-message></p>
+            </form>
+        </div>
+    {% endfor %}
+</div>
+<p><a href="{{ url_for('catalog.detail', listing_id=listing.listing_id) }}">View listing</a></p>
+{% else %}
+<p class="muted">You can add photos after creating the listing.</p>
+{% endif %}
+{% endblock %}

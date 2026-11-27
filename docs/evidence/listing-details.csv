@@ -1,0 +1,10 @@
+﻿Listing id,Title,Seller name,Category name,Price,Currency code,Item condition,Listing status
+1,Database Systems Textbook,Alex Morgan,Textbooks,45.00,CAD,Good,Available
+2,Wireless Mouse,Priya Shah,Electronics,20.00,CAD,Like New,Available
+3,Study Desk,Jordan Lee,Furniture,80.00,USD,Good,Reserved
+4,Winter Jacket,Maya Chen,Clothing,55.00,USD,Good,Sold
+5,Basketball,Omar Hassan,Sports Equipment,15.00,CAD,Fair,Available
+6,USB-C Monitor,Alex Morgan,Electronics,120.00,CAD,Like New,Available
+7,Calculus Textbook,Priya Shah,Textbooks,30.00,CAD,Fair,Removed
+8,Desk Lamp,Jordan Lee,Furniture,18.00,USD,New,Available
+9,Intro to Statistics,Maya Chen,Textbooks,25.00,USD,Good,Available
