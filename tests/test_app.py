@@ -42,6 +42,15 @@ def test_database_failure_has_readable_html_and_json():
     assert response.json["error"]["code"] == "database_unavailable"
 
 
+def test_demo_seed_has_six_rows_per_table(app):
+    tables = ("Students", "Categories", "Listings", "Listing_Images", "Purchase_Inquiries", "Pickup_Forecasts")
+    with app.app_context():
+        for table in tables:
+            assert first(f"SELECT COUNT(*) AS total FROM {table}")["total"] >= 6, table
+        forecasts = rows("SELECT place_label FROM Pickup_Forecasts")
+    assert all(row["place_label"].endswith("(sample)") for row in forecasts)
+
+
 def test_registration_is_open_to_multiple_schools(app, api_write):
     client = app.test_client()
     for address in (" TESS@college.example.org ", "lee@institute.example.net"):

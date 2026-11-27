@@ -1,0 +1,65 @@
+name: Linux install check
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: linux-ci-db-only
+          MYSQL_ROOT_HOST: "%"
+          MYSQL_DATABASE: extra_credit
+          MYSQL_USER: extra_credit_app
+          MYSQL_PASSWORD: linux-ci-app-only
+        ports:
+          - 3306/tcp
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 --silent"
+          --health-interval 5s
+          --health-timeout 4s
+          --health-retries 24
+
+    env:
+      DB_PASSWORD: linux-ci-app-only
+      TEST_DB_PASSWORD: linux-ci-db-only
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Follow the Linux README setup
+        env:
+          DB_PORT: ${{ job.services.mysql.ports[3306] }}
+        run: |
+          python3 -m venv .venv
+          source .venv/bin/activate
+          python -m pip install -r requirements.txt
+          cp .env.example .env
+          python -m flask --app extracredit init-db
+          printf '%s\n' 'linux-ci-demo-login' 'linux-ci-demo-login' | python -m flask --app extracredit seed-demo
+          python -m flask --app extracredit run &
+          app_pid=$!
+          trap 'kill "$app_pid" 2>/dev/null || true' EXIT
+          curl -fsS --retry 5 --retry-connrefused --retry-delay 1 http://127.0.0.1:5000/health
+          curl -fsS http://127.0.0.1:5000/listings > catalog.html
+          grep 'Database Systems Textbook' catalog.html
+
+      - name: Run MySQL integration tests
+        env:
+          TEST_DB_PORT: ${{ job.services.mysql.ports[3306] }}
+        run: |
+          source .venv/bin/activate
+          python -m pip install -r requirements-dev.txt
+          RUN_DB_TESTS=1 python -m pytest -q

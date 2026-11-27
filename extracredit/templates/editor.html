@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ 'Edit listing' if listing else 'New listing' }} · ExtraCredit{% endblock %}
 {% block content %}
-<h1>{{ 'Edit listing' if listing else 'New listing' }}</h1>
+<h1 id="listing-heading">{{ 'Edit listing' if listing else 'New listing' }}</h1>
 <form class="stack narrow" data-api-form="/api/listings{{ '/' ~ listing.listing_id if listing else '' }}"
       data-method="{{ 'PUT' if listing else 'POST' }}" data-action="listing">
     <label>Title <input name="title" maxlength="150" required value="{{ listing.title if listing else '' }}"></label>
@@ -30,16 +30,19 @@
     <button>{{ 'Save changes' if listing else 'Create listing' }}</button>
     <p role="status" data-message></p>
 </form>
-{% if listing %}
+<p id="listing-view"{% if not listing %} hidden{% endif %}>
+    <a {% if listing %}href="{{ url_for('catalog.detail', listing_id=listing.listing_id) }}"{% endif %}>View listing</a>
+</p>
+<section id="listing-photos"{% if not listing %} hidden{% endif %}>
 <h2>Photos</h2>
 <p>Up to five JPEG or PNG photos, 3 MiB each.</p>
-<form class="stack narrow" data-api-form="/api/listings/{{ listing.listing_id }}/images" data-method="POST"
+<form class="stack narrow" data-api-form="{{ '/api/listings/' ~ listing.listing_id ~ '/images' if listing else '' }}" data-method="POST"
       data-action="upload" data-file-form>
     <label>Photo <input name="photo" type="file" accept="image/jpeg,image/png" required></label>
     <button>Upload photo</button>
     <p role="status" data-message></p>
 </form>
-<div class="photos" id="edit-photos" data-listing="{{ listing.listing_id }}">
+<div class="photos" id="edit-photos" data-listing="{{ listing.listing_id if listing else '' }}">
     {% for photo in photos %}
         <div data-photo>
             {% if photo.exists %}<img src="{{ photo.media_url }}" alt="Photo of {{ listing.title }}">
@@ -50,8 +53,5 @@
         </div>
     {% endfor %}
 </div>
-<p><a href="{{ url_for('catalog.detail', listing_id=listing.listing_id) }}">View listing</a></p>
-{% else %}
-<p class="muted">You can add photos after creating the listing.</p>
-{% endif %}
+</section>
 {% endblock %}

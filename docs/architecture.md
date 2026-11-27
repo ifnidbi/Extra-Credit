@@ -2,6 +2,10 @@
 
 ExtraCredit is a single Flask app for the course demo. Python handles routing, permissions, validation, and business rules. SQL runs directly through MySQL Connector/Python so students can see and explain their queries. Jinja builds pages on the server. Plain JavaScript uses Fetch for interactive listing, inquiry, report, and weather features. Chart.js draws one report chart. Pillow verifies and re-encodes uploaded photos, ReportLab creates PDF exports, the standard library creates CSV, Requests calls Open-Meteo, and pytest runs automated checks. Use Python 3.12 or 3.13 and MySQL 8.4 LTS. Dependency versions are pinned in the requirements files. [Flask tutorial](https://flask.palletsprojects.com/en/stable/tutorial/) · [Connector/Python](https://dev.mysql.com/doc/connector-python/en/) · [Chart.js](https://www.chartjs.org/docs/latest/getting-started/) · [ReportLab](https://docs.reportlab.com/reportlab/userguide/ch1_intro/)
 
+## Architecture diagram
+
+![The browser talks to Flask over HTTP. Flask talks to MySQL, Open-Meteo, and local photo storage.](evidence/architecture-diagram.png)
+
 ## Where to find the code
 
 | File | Responsibilities |
@@ -33,6 +37,8 @@ Each feature file keeps its routes, rules, and SQL together so a reader can foll
 ## Web pages and endpoints
 
 Server pages use GET unless shown otherwise. Account form POSTs use redirect-after-success and redisplay field errors. The browser uses same-origin Fetch for JSON. Routes that return JSON use an envelope with `data` on success and `error` containing `code`, `message`, and optional `fields` on failure. DELETE returns 204 with an empty body. Dates are ISO strings and currency amounts are decimal strings. Use 201 on create, 400 on bad input, 401 for anonymous JSON access, 403 for role denial, 404 for missing or intentionally hidden records, 409 for state conflicts, 413 for oversized input, 502 for provider failure, and 503 for database unavailability. Guests visiting protected HTML pages go to login. Issue checks should examine status codes and visible output.
+
+Listing creation and edits use Fetch and stay in the editor. Creating a listing reveals photo controls and updates the address to the saved edit page so that a refresh can load it again. JavaScript checks price ranges, currency requirements, whole-yen prices and pickup dates before submitting. Flask repeats validation at the API boundary.
 
 | Page or API | Methods and access | Contract |
 | --- | --- | --- |

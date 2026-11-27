@@ -35,6 +35,48 @@ function setMessage(element, message, failed = false) {
     }
 }
 
+function showInputError(input, status, message) {
+    input.setAttribute("aria-invalid", "true");
+    setMessage(status, message, true);
+    input.focus();
+}
+
+function checkForm(form, status) {
+    if (!form.reportValidity()) return false;
+    const date = form.elements.namedItem("preferred_date");
+    if (date && date.value < new Date().toISOString().slice(0, 10)) {
+        showInputError(date, status, "Choose today or a later date.");
+        return false;
+    }
+    const price = form.elements.namedItem("price");
+    if (price && form.elements.currency_code.value === "JPY" && !Number.isInteger(price.valueAsNumber)) {
+        showInputError(price, status, "Enter a whole number for a JPY price.");
+        return false;
+    }
+    return true;
+}
+
+function showSavedListing(form, listing) {
+    const id = listing.listing_id;
+    if (form.dataset.method === "POST") {
+        form.dataset.method = "PUT";
+        form.dataset.apiForm = `/api/listings/${id}`;
+        form.querySelector("button").textContent = "Save changes";
+        document.querySelector("#listing-heading").textContent = "Edit listing";
+        document.title = "Edit listing · ExtraCredit";
+        window.history.replaceState(null, "", `/listings/${id}/edit`);
+
+        const photos = document.querySelector("#listing-photos");
+        photos.querySelector("form").dataset.apiForm = `/api/listings/${id}/images`;
+        photos.querySelector("#edit-photos").dataset.listing = id;
+        photos.hidden = false;
+    }
+    const view = document.querySelector("#listing-view");
+    view.querySelector("a").href = `/listings/${id}`;
+    view.hidden = false;
+    setMessage(form.querySelector("[data-message]"), "Listing saved.");
+}
+
 function addPhoto(photo) {
     const gallery = document.querySelector("#edit-photos");
     const card = document.createElement("div");
@@ -77,7 +119,7 @@ function handleSuccess(form, result) {
     const status = form.querySelector("[data-message]");
     setMessage(status, form.dataset.success || "Saved.");
 
-    if (action === "listing") window.location.assign(`/listings/${result.listing_id}`);
+    if (action === "listing") showSavedListing(form, result);
     if (action === "sign-out" || action === "browse") window.location.assign("/listings");
     if (action === "clear") form.reset();
     if (action === "upload") {
@@ -121,14 +163,15 @@ document.addEventListener("submit", async event => {
     const form = event.target.closest("[data-api-form]");
     if (!form) return;
     event.preventDefault();
-    if (form.dataset.confirm && !window.confirm(form.dataset.confirm)) return;
     const status = form.querySelector("[data-message]");
+    for (const input of form.querySelectorAll("input, select, textarea")) input.removeAttribute("aria-invalid");
+    if (!checkForm(form, status)) return;
+    if (form.dataset.confirm && !window.confirm(form.dataset.confirm)) return;
     const fields = new FormData(form);
     if (event.submitter?.name) fields.set(event.submitter.name, event.submitter.value);
     const data = form.hasAttribute("data-file-form") ? fields : Object.fromEntries(fields);
     const buttons = form.querySelectorAll("button");
     for (const button of buttons) button.disabled = true;
-    for (const input of form.querySelectorAll("input, select, textarea")) input.removeAttribute("aria-invalid");
     setMessage(status, "Saving…");
     try {
         const result = await requestJson(form.dataset.apiForm, form.dataset.method, data);
@@ -165,6 +208,18 @@ function setupSearch(form) {
 
     async function search(page) {
         const current = ++latest;
+        const min = form.elements.min_price;
+        const max = form.elements.max_price;
+        const currency = form.elements.currency;
+        for (const input of [min, max, currency]) input.removeAttribute("aria-invalid");
+        if ((min.value || max.value) && !currency.value) {
+            showInputError(currency, message, "Choose a currency to search by price.");
+            return;
+        }
+        if (min.value && max.value && min.valueAsNumber > max.valueAsNumber) {
+            showInputError(max, message, "Maximum price must be at least the minimum price.");
+            return;
+        }
         const params = new URLSearchParams(new FormData(form));
         if (page > 1) params.set("page", page);
         setMessage(message, "Searching…");

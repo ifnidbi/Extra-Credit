@@ -46,7 +46,7 @@ python -m flask --app extracredit seed-demo
 python -m flask --app extracredit run
 ```
 
-`seed-demo` works on an empty local schema and asks you to choose a password for the fictional accounts. Open `http://127.0.0.1:5000/`. Use `alex@example.com` as a seller, `priya@example.com` as a buyer, and `admin@example.com` for reports and category management. Each uses the password you chose. Keep `.env`, uploads, real contact information, and passwords local.
+`seed-demo` works on an empty local schema and asks you to choose a password for the fictional accounts. It inserts at least six rows per table, including six labeled sample forecasts. Open `http://127.0.0.1:5000/`. Use `alex@example.com` as a seller, `priya@example.com` as a buyer, and `admin@example.com` for reports and category management. Each uses the password you chose. Keep `.env`, uploads, real contact information, and passwords local.
 
 If you get a 503, verify that MySQL is ready and that the same host, port or socket, account, and database work from your SQL client. If the demo seed says the database is populated, use your existing data or start a fresh local demo schema. Use a separate local server for test credentials. Open-Meteo requires internet access. Catalog and report charts work locally with the bundled Chart.js asset.
 
@@ -58,6 +58,8 @@ python -m pytest -q
 ```
 
 The plain command runs tests that do not need a working database. To run integration tests, provide the temporary MySQL connection in `TEST_DB_HOST`, `TEST_DB_PORT`, `TEST_DB_USER`, `TEST_DB_PASSWORD`, or `TEST_DB_SOCKET`, then set `RUN_DB_TESTS=1` and run the same command. Use a test account that can create and drop databases on an isolated MySQL server. Each integration test creates and removes its own randomly named `extra_credit_test_…` schema.
+
+The [Linux install check](https://github.com/ifnidbi/Extra-Credit/actions/workflows/linux-check.yml) runs the setup on Ubuntu with MySQL 8.4 and checks the seeded catalog and database tests.
 
 ## Project material
 
