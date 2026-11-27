@@ -94,6 +94,7 @@ def photo_row(listing_id, image_id, db=None):
 
 
 @bp.get("/media/listings/<int:listing_id>/<int:image_id>")
+@require_login
 def media(listing_id, image_id):
     get_listing(listing_id)
     photo = photo_row(listing_id, image_id)

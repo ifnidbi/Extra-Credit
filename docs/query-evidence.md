@@ -4,7 +4,7 @@ Use these results with the [report checklist](report-checklist.md). The captures
 
 ## Database, views, and chart
 
-The fresh seed produced 6 Students, 6 Categories, 9 Listings, 7 Listing Images, 8 Purchase Inquiries, and 6 Pickup Forecasts. The seeded forecasts are labeled `(sample)`. The live Toronto result was saved separately. [Fresh seed counts](evidence/database-row-counts.png) · [Schema and ER diagram](database.md) · [Architecture diagram](evidence/architecture-diagram.png)
+The fresh seed produced 6 Students, 6 Categories, 9 Listings, 7 Listing Images, 8 Purchase Inquiries, and 6 Pickup Forecasts. The seeded forecasts are labeled `(sample)`. The live Oshawa result was saved separately. [Fresh seed counts](evidence/database-row-counts.png) · [Schema and ER diagram](database.md) · [Architecture diagram](evidence/architecture-diagram.png)
 
 | View | MySQL view | Seed rows | App screenshot |
 | --- | --- | ---: | --- |
@@ -27,11 +27,11 @@ The chart reads category counts from view 7, summed across currencies. Expected 
 
 | Check | Observed result | Evidence |
 | --- | --- | --- |
-| Search and Fetch | Lakeview, CAD, and the 40–50 price range returned listing 1 without a page navigation. JavaScript caught a missing currency and reversed price range before sending a request. | [Catalog search](evidence/catalog-filter.png) |
-| Registration and roles | A fictional Riverside student registered. A guest was directed to sign in for reports, a regular student received 403, and the admin opened both report pages. | Reproduce with separate browser sessions and the [demo accounts](../README.md#run-locally). |
-| Listing CRUD | Seller created listing 10 and changed its price from 19.25 to 20.00 CAD in the same editor. They read it, marked it Sold, and removed it. The guest detail endpoint then returned 404. | [After POST](evidence/listing-created.png) · [After PUT](evidence/listing-after-update.png) · [After DELETE](evidence/listing-removed.png) · [Saved rows](evidence/listing-query-results.png) |
-| Buyer and seller inquiry | Buyer created inquiry 9 over Fetch. The seller accepted it, which reserved listing 10. The integration tests also demonstrated a rolled-back acceptance and a declined competing request. | [Buyer submits](evidence/pickup-request.png) · [Seller accepts](evidence/inquiry-accepted.png) |
-| Live external API | A Toronto geocoding result was selected and a forecast was saved with HTTP 201. A separate GET returned the same snapshot from MySQL. | [Saved weather history](evidence/weather-live.png) · [MySQL SELECT output](evidence/pickup-forecast-query.png) |
+| Search and Fetch | North Oshawa, CAD, and the 40–50 price range returned listing 1 without a page navigation. JavaScript caught a missing currency and reversed price range before sending a request. | [Catalog search](evidence/catalog-filter.png) |
+| Registration and roles | A guest was directed to sign-in, registration rejected a non-Ontario Tech address, and a demo student confirmed an Ontario Tech address through the local inbox. A regular student could browse and an admin could open both report pages. | [Guest sign-in gate](evidence/campus-guest.png) · [Domain check](evidence/campus-registration.png) · [Email confirmed](evidence/campus-email-confirmed.png) |
+| Listing CRUD | Seller created listing 10 and changed its price from 19.25 to 20.00 CAD in the same editor. They read it, marked it Sold, and removed it. The buyer could no longer open the removed listing. | [After POST](evidence/listing-created.png) · [After PUT](evidence/listing-after-update.png) · [After DELETE](evidence/listing-removed.png) · [Saved rows](evidence/listing-query-results.png) |
+| Buyer and seller inquiry | Buyer chose Campus Library at North Oshawa and created inquiry 9 over Fetch. The seller accepted it, which reserved listing 10. The integration tests also demonstrated a rolled-back acceptance and a declined competing request. | [Buyer submits](evidence/pickup-request.png) · [Seller accepts](evidence/inquiry-accepted.png) |
+| Live external API | Open-Meteo returned the Oshawa forecast for both pickup campuses. The app saved it with HTTP 201. A separate GET returned the same snapshot from MySQL. | [Saved weather history](evidence/weather-live.png) · [MySQL SELECT output](evidence/pickup-forecast-query.png) |
 
 ## Queries to include in the report
 
@@ -43,7 +43,7 @@ The chart reads category counts from view 7, summed across currencies. Expected 
 
 ## Verification notes
 
-Fifteen tests passed locally against MySQL 8.4.11. They cover the database-independent health route, a database outage, the seed minimum, registration, sessions and CSRF, role and ownership checks, listing CRUD and filters, category CRUD, private inquiries and rollback, photo upload and cleanup, the ten views, CSV/PDF output, and mocked weather errors. The browser verified that creating and editing a listing preserve the same page instance and that invalid dates and prices do not send a request. The Linux workflow checks the README setup on Ubuntu. [Linux check](https://github.com/ifnidbi/Extra-Credit/actions/workflows/linux-check.yml)
+Eighteen tests passed locally against MySQL 8.4.11. They cover the database-independent health route, a database outage, the seed minimum, Ontario Tech email confirmation, sessions and CSRF, role and ownership checks, listing CRUD and filters, category CRUD, private inquiries and rollback, photo upload and cleanup, the ten views, CSV/PDF output, and mocked weather errors. The browser verified that creating and editing a listing preserve the same page instance and that invalid dates and prices do not send a request. The Linux workflow checks the README setup on Ubuntu. [Linux check](https://github.com/ifnidbi/Extra-Credit/actions/workflows/linux-check.yml)
 
 One issue caught during visual review was chart animation showing interim bar heights during the capture. The report chart now renders immediately at the actual counts.
 

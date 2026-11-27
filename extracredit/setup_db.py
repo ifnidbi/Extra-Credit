@@ -21,12 +21,16 @@ def run_scripts(db, paths):
 
 def build_schema(db):
     run_scripts(db, sorted(SQL.glob("0[1-6]_*.sql")))
+    if not first("SHOW COLUMNS FROM Students LIKE 'email_verified'", db=db):
+        write("ALTER TABLE Students ADD COLUMN email_verified BOOLEAN NOT NULL DEFAULT FALSE", db=db)
     run_scripts(db, sorted((SQL / "views").glob("*.sql")))
 
 
 def seed():
-    if current_app.config["DB_NAME"] not in {"extra_credit", "extra_credit_test"}:
-        raise click.ClickException("Demo data is only allowed in extra_credit or extra_credit_test.")
+    if not current_app.config["DEMO_MODE"]:
+        raise click.ClickException("Set DEMO_MODE=true to load fictional accounts.")
+    if current_app.config["DB_NAME"] not in {"extra_credit", "extra_credit_test", "extra_credit_ontario_tech"}:
+        raise click.ClickException("Use an ExtraCredit demo database name.")
     password = click.prompt("Password for fictional demo users", hide_input=True, confirmation_prompt=True)
     if len(password) < 12:
         raise click.ClickException("Use at least 12 characters.")

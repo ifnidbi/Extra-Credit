@@ -1,5 +1,7 @@
 # Build tickets
 
+The original tickets record the build plan. The [current architecture](../docs/architecture.md) describes the implemented Ontario Tech scope, including account confirmation, campus pickup, and Oshawa weather.
+
 Tickets 001–006 are individual exercises that use a scratch folder or practice repo. Everybody can do them. The table shows the estimated time for one person's work, including their first check. If you're new to a topic, take an extra learning pass with the linked material. A dependency is complete when the change it needs is merged and verified, or when a local-only setup step works for the person taking the next ticket.
 
 ## Start in parallel

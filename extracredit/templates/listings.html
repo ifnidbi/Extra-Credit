@@ -1,10 +1,15 @@
 {% extends "base.html" %}
 {% block title %}Browse listings · ExtraCredit{% endblock %}
 {% block content %}
-<h1>Browse listings</h1>
+<h1>Ontario Tech listings</h1>
 <form id="search" class="filters" action="{{ url_for('catalog.index') }}" method="get">
     <label>Search <input type="search" name="q" maxlength="150" value="{{ request.args.get('q', '') }}" placeholder="Books, desks, and more"></label>
-    <label>Campus <input name="campus" maxlength="150" value="{{ request.args.get('campus', '') }}"></label>
+    <label>Campus
+        <select name="campus">
+            <option value="">Both campuses</option>
+            {% for campus in campuses %}<option {% if request.args.get('campus') == campus %}selected{% endif %}>{{ campus }}</option>{% endfor %}
+        </select>
+    </label>
     <label>Category
         <select name="category_id">
             <option value="">All categories</option>

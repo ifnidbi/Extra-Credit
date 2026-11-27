@@ -120,7 +120,8 @@ function handleSuccess(form, result) {
     setMessage(status, form.dataset.success || "Saved.");
 
     if (action === "listing") showSavedListing(form, result);
-    if (action === "sign-out" || action === "browse") window.location.assign("/listings");
+    if (action === "sign-out") window.location.assign("/login");
+    if (action === "browse") window.location.assign("/listings");
     if (action === "clear") form.reset();
     if (action === "upload") {
         addPhoto(result);
@@ -297,14 +298,9 @@ async function setupChart(canvas) {
     }
 }
 
-function setupWeather(search) {
-    const save = document.querySelector("#weather-save");
-    const menu = save.elements.place;
+function setupWeather(save) {
     const table = document.querySelector("#weather-rows");
     const message = document.querySelector("#weather-message");
-    let places = [];
-    let latest = 0;
-
     async function readHistory() {
         const forecasts = await requestJson("/api/weather/snapshots");
         table.replaceChildren();
@@ -318,34 +314,13 @@ function setupWeather(search) {
         if (!forecasts.length) emptyRow(table, 4, "No forecasts saved yet.");
     }
 
-    search.addEventListener("submit", async event => {
-        event.preventDefault();
-        const current = ++latest;
-        const params = new URLSearchParams(new FormData(search));
-        save.hidden = true;
-        setMessage(message, "Finding cities…");
-        try {
-            const result = await requestJson(`/api/weather/places?${params}`);
-            if (current !== latest) return;
-            places = result;
-            menu.replaceChildren();
-            for (const [index, place] of places.entries()) menu.add(new Option(place.place_label, index));
-            if (places.length) save.hidden = false;
-            setMessage(message, places.length ? "Choose a city." : "No cities found.");
-        } catch (error) {
-            if (current === latest) setMessage(message, error.message, true);
-        }
-    });
-
     save.addEventListener("submit", async event => {
         event.preventDefault();
-        const place = places[Number(menu.value)];
-        if (!place) return;
         const button = save.querySelector("button");
         button.disabled = true;
         setMessage(message, "Getting forecast…");
         try {
-            await requestJson("/api/weather/snapshots", "POST", place);
+            await requestJson("/api/weather/snapshots", "POST", {});
             setMessage(message, "Forecast saved.");
             try {
                 await readHistory();
@@ -364,7 +339,7 @@ function setupWeather(search) {
 
 const search = document.querySelector("#search");
 const chart = document.querySelector("#category-chart");
-const weather = document.querySelector("#weather-search");
+const weather = document.querySelector("#weather-save");
 
 if (search) setupSearch(search);
 if (chart) setupChart(chart);

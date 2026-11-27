@@ -1,6 +1,6 @@
 # ExtraCredit
 
-ExtraCredit is a secondhand marketplace for students. Browse local campus listings, post items, and send pickup inquiries. Admins can open two report pages for ten MySQL views, see a category chart, and download CSV or PDF files. Signed-in users can save a city's pickup forecast.
+ExtraCredit is a secondhand marketplace for Ontario Tech University students. Confirm your Ontario Tech student email to browse listings, post items, and arrange pickup at North Oshawa or Downtown Oshawa. Admins can open ten MySQL reports and download CSV or PDF files. Students can save the Oshawa pickup forecast. [Student email](https://ontariotechu.ca/current-students/index.php) · [Campus locations](https://registrar.ontariotechu.ca/registration/campus-locations.php)
 
 ## Run locally
 
@@ -46,7 +46,11 @@ python -m flask --app extracredit seed-demo
 python -m flask --app extracredit run
 ```
 
-`seed-demo` works on an empty local schema and asks you to choose a password for the fictional accounts. It inserts at least six rows per table, including six labeled sample forecasts. Open `http://127.0.0.1:5000/`. Use `alex@example.com` as a seller, `priya@example.com` as a buyer, and `admin@example.com` for reports and category management. Each uses the password you chose. Keep `.env`, uploads, real contact information, and passwords local.
+`seed-demo` works on an empty local schema and asks you to choose a password for the fictional accounts. It inserts at least six rows per table, including six labeled sample forecasts. With `DEMO_MODE=true` in your local `.env`, open `http://127.0.0.1:5000/` and sign in to browse. Use `alex@example.com` as a seller, `priya@example.com` as a buyer, and `admin@example.com` for reports and category management. Each uses the password you chose. Keep `.env`, uploads, real contact information, and passwords local.
+
+To try registration on your own machine, use a fictional `@ontariotechu.net` address and open the link from the newest `instance/verification/student-*.txt` file. Demo mode writes confirmation links locally. Use the ExtraCredit password you chose when you registered.
+
+For real confirmation emails, set `DEMO_MODE=false`, `PUBLIC_URL` to the app’s HTTPS URL, `COOKIE_SECURE=true`, and the `SMTP_*` settings for your STARTTLS mail service. The app checks access to the mailbox. Students also confirm current enrollment by self-attestation. For an older demo, use a fresh `extra_credit_ontario_tech` database and the new seed so earlier sample listings and accounts are preserved separately.
 
 If you get a 503, verify that MySQL is ready and that the same host, port or socket, account, and database work from your SQL client. If the demo seed says the database is populated, use your existing data or start a fresh local demo schema. Use a separate local server for test credentials. Open-Meteo requires internet access. Catalog and report charts work locally with the bundled Chart.js asset.
 

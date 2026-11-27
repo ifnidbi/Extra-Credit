@@ -7,14 +7,14 @@ Use a fresh MySQL 8.4 database called `extra_credit`. The ER diagram below shows
 | File and table | Columns and constraints |
 | --- | --- |
 | `00_database.sql` | Create and select the `extra_credit` development database with utf8mb4. Document how to make a separate test database. DDL and seed scripts subsequent to this one should run against the selected database without hard-coded schema prefixes. |
-| `01_students.sql` · `Students` | `student_id` unsigned integer auto-increment PK, `full_name` VARCHAR(100), `email` VARCHAR(150) UNIQUE, `password_hash` VARCHAR(255), `school_name` VARCHAR(150), `role` ENUM user/admin default user, `is_active` BOOLEAN default true. All required. The registration checkbox is a required application input. |
+| `01_students.sql` · `Students` | `student_id` unsigned integer auto-increment PK, `full_name` VARCHAR(100), `email` VARCHAR(150) UNIQUE, `password_hash` VARCHAR(255), `school_name` VARCHAR(150), `role` ENUM user/admin default user, `is_active` BOOLEAN default true, `email_verified` BOOLEAN default false. All required. New accounts confirm their Ontario Tech mailbox before sign-in. |
 | `02_categories.sql` · `Categories` | `category_id` unsigned integer auto-increment PK, `category_name` VARCHAR(100) UNIQUE and required. |
 | `03_listings.sql` · `Listings` | `listing_id` unsigned integer auto-increment PK, `seller_id` FK → Students, `category_id` FK → Categories, `title` VARCHAR(150), optional `description` TEXT, `price` DECIMAL(10,2) CHECK nonnegative, `currency_code` CHAR(3) CHECK supported currency, `item_condition` ENUM New / Like New / Good / Fair / Poor, `listing_status` ENUM Available / Reserved / Sold / Removed default Available, `campus_name` VARCHAR(150), `date_posted` DATETIME default CURRENT_TIMESTAMP. All required except description. Restrict deletes on both FKs. Enforce whole JPY amounts. |
 | `04_listing_images.sql` · `Listing_Images` | `image_id` unsigned integer auto-increment PK, `listing_id` FK → Listings with ON DELETE CASCADE, `image_path` VARCHAR(255) UNIQUE, required, stores a generated file key. |
 | `05_purchase_inquiries.sql` · `Purchase_Inquiries` | `inquiry_id` unsigned integer auto-increment PK, `listing_id` FK → Listings, `buyer_id` FK → Students, `pickup_location` VARCHAR(150), `payment_method` VARCHAR(50), `preferred_date` DATE, `inquiry_status` ENUM Pending / Accepted / Declined / Withdrawn default Pending, `submitted_at` DATETIME default CURRENT_TIMESTAMP. All required. Restrict deletes on both FKs. |
 | `06_pickup_forecasts.sql` · `Pickup_Forecasts` | `snapshot_id` unsigned integer auto-increment PK, `student_id` FK → Students with delete restriction, `place_label` VARCHAR(150), `latitude` DECIMAL(7,4), `longitude` DECIMAL(7,4), `forecast_date` DATE, `max_temp_c` DECIMAL(5,2), `precip_probability` unsigned tiny integer with maximum 100, `fetched_at` DATETIME default CURRENT_TIMESTAMP. All required. |
 
-All IDs used in FKs have matching types. The original table relationships use ON UPDATE CASCADE. Apply schema, seed, and view files to a development or test database as described in the README. The seed supplies at least six rows for each table, including an unused category, an inactive student, available listings with and without image rows, multiple inquiry states, and two currencies across categories. Seed photo keys show an unavailable placeholder until a photo is uploaded. Six fictional forecast records belong to Jordan and Maya and have `(sample)` in their labels. A live lookup records a separate result for the signed-in student. [Fresh seed counts](evidence/database-row-counts.png)
+All IDs used in FKs have matching types. The original table relationships use ON UPDATE CASCADE. Apply schema, seed, and view files to a development or test database as described in the README. The seed supplies at least six rows for each table, including an unused category, an inactive student, available listings with and without image rows, multiple inquiry states, and two currencies across categories. Seed photo keys show an unavailable placeholder until a photo is uploaded. Six fictional Oshawa forecast records belong to Jordan and Maya and have `(sample)` in their labels. A live lookup records a separate result for the signed-in student. [Fresh seed counts](evidence/database-row-counts.png)
 
 The schema includes `idx_listing_status_currency_date` on `Listings(listing_status, currency_code, date_posted, listing_id)`. It supports filtered catalog reads that select a currency and sort newest first. See the [measured comparison](performance.md). [MySQL EXPLAIN](https://dev.mysql.com/doc/refman/8.4/en/explain.html) · [Locking reads](https://dev.mysql.com/doc/refman/8.4/en/innodb-locking-reads.html)
 
@@ -60,6 +60,7 @@ erDiagram
         varchar school_name
         enum role
         boolean is_active
+        boolean email_verified
     }
     Categories {
         int category_id PK

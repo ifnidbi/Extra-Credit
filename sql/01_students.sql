@@ -5,5 +5,6 @@ CREATE TABLE IF NOT EXISTS Students (
     password_hash VARCHAR(255) NOT NULL,
     school_name VARCHAR(150) NOT NULL,
     role ENUM('user', 'admin') NOT NULL DEFAULT 'user',
-    is_active BOOLEAN NOT NULL DEFAULT TRUE
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    email_verified BOOLEAN NOT NULL DEFAULT FALSE
 ) ENGINE=InnoDB;

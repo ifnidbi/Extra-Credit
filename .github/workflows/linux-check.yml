@@ -53,8 +53,21 @@ jobs:
           app_pid=$!
           trap 'kill "$app_pid" 2>/dev/null || true' EXIT
           curl -fsS --retry 5 --retry-connrefused --retry-delay 1 http://127.0.0.1:5000/health
-          curl -fsS http://127.0.0.1:5000/listings > catalog.html
-          grep 'Database Systems Textbook' catalog.html
+          python - <<'PY'
+          import re
+          import requests
+
+          base = 'http://127.0.0.1:5000'
+          with requests.Session() as session:
+              guest = session.get(base + '/listings', allow_redirects=False, timeout=5)
+              assert guest.status_code == 302 and guest.headers['Location'] == '/login'
+              login = session.get(base + '/login', timeout=5)
+              csrf = re.search(r'<meta name="csrf-token" content="([^"]+)"', login.text).group(1)
+              signed_in = session.post(base + '/login', data={
+                  'email': 'alex@example.com', 'password': 'linux-ci-demo-login', 'csrf_token': csrf,
+              }, timeout=5)
+              assert signed_in.ok and 'Database Systems Textbook' in signed_in.text
+          PY
 
       - name: Run MySQL integration tests
         env:

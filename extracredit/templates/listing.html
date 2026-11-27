@@ -21,14 +21,17 @@
 <h2>Request pickup</h2>
 <form class="stack narrow" data-api-form="/api/inquiries" data-method="POST" data-success="Pickup inquiry sent." data-action="clear">
     <input type="hidden" name="listing_id" value="{{ listing.listing_id }}">
-    <label>Pickup location <input name="pickup_location" maxlength="150" required></label>
+    <label>Pickup location
+        <select name="pickup_location" required>
+            <option value="">Choose a campus pickup spot</option>
+            {% for spot in pickup_spots %}<option>{{ spot }}</option>{% endfor %}
+        </select>
+    </label>
     <label>Payment preference <select name="payment_method" required><option value="">Choose one</option><option>Cash</option><option>E-transfer</option><option>Other</option></select></label>
     <label>Preferred date <input name="preferred_date" type="date" required></label>
     <button>Send inquiry</button>
     <p role="status" data-message></p>
 </form>
-{% elif not user and listing.listing_status == 'Available' %}
-<p><a href="{{ url_for('accounts.login') }}">Sign in</a> to request pickup.</p>
 {% endif %}
 {% if user and user.role == 'admin' and user.student_id != listing.seller_id and listing.listing_status != 'Removed' %}
 <form data-api-form="/api/listings/{{ listing.listing_id }}" data-method="DELETE" data-action="browse"

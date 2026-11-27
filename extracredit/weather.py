@@ -2,14 +2,16 @@ from datetime import date
 from decimal import Decimal, InvalidOperation
 
 import requests
-from flask import Blueprint, render_template, request
+from flask import Blueprint, render_template
 
 from .accounts import current_user, require_login
-from .common import AppError, api, form_data, invalid, text
+from .common import AppError, api, form_data
 from .db import first, rows, write
 
 bp = Blueprint("weather", __name__)
-GEOCODING = "https://geocoding-api.open-meteo.com/v1/search"
+PLACE = "Oshawa, Ontario"
+LATITUDE = Decimal("43.9001")
+LONGITUDE = Decimal("-78.8496")
 FORECAST = "https://api.open-meteo.com/v1/forecast"
 FIELDS = "snapshot_id, place_label, latitude, longitude, forecast_date, max_temp_c, precip_probability, fetched_at"
 
@@ -37,29 +39,6 @@ def number(value, minimum, maximum):
     return value
 
 
-def search_places(query):
-    if len(query) < 3:
-        invalid("q", "Enter at least three characters.")
-    data = fetch_data(GEOCODING, {"name": query, "count": 5, "language": "en", "format": "json"})
-    try:
-        results = data.get("results", [])
-        if not isinstance(results, list):
-            raise ValueError("Missing place list.")
-        places = []
-        for item in results[:5]:
-            label = ", ".join(dict.fromkeys(item[key] for key in ("name", "admin1", "country") if item.get(key)))
-            if not label or len(label) > 150:
-                continue
-            places.append({
-                "place_label": label,
-                "latitude": number(item["latitude"], -90, 90),
-                "longitude": number(item["longitude"], -180, 180),
-            })
-        return places
-    except (AttributeError, KeyError, TypeError, ValueError, InvalidOperation) as error:
-        raise provider_error() from error
-
-
 def fetch_forecast(latitude, longitude):
     data = fetch_data(FORECAST, {
         "latitude": latitude, "longitude": longitude, "timezone": "auto", "forecast_days": 1,
@@ -83,19 +62,13 @@ def page():
     return render_template("weather.html")
 
 
-@bp.get("/api/weather/places")
-@require_login
-def places():
-    return api(search_places(text(request.args, "q", 100)))
-
-
 @bp.get("/api/weather/snapshots")
 @require_login
 def history():
     saved = rows(
-        f"""SELECT {FIELDS} FROM Pickup_Forecasts WHERE student_id = %s
+        f"""SELECT {FIELDS} FROM Pickup_Forecasts WHERE student_id = %s AND place_label IN (%s, %s)
             ORDER BY fetched_at DESC, snapshot_id DESC LIMIT 10""",
-        (current_user()["student_id"],),
+        (current_user()["student_id"], PLACE, PLACE + " (sample)"),
     )
     return api(saved)
 
@@ -103,17 +76,12 @@ def history():
 @bp.post("/api/weather/snapshots")
 @require_login
 def save():
-    data = form_data()
-    label = text(data, "place_label", 150)
-    try:
-        latitude = number(data.get("latitude"), -90, 90).quantize(Decimal("0.0001"))
-        longitude = number(data.get("longitude"), -180, 180).quantize(Decimal("0.0001"))
-    except (ValueError, InvalidOperation):
-        invalid("coordinates", "Choose a place with valid coordinates.")
-    values = fetch_forecast(latitude, longitude)
+    if form_data():
+        raise AppError(400, "invalid_place", "Pickup weather uses Oshawa for both Ontario Tech campuses.")
+    values = fetch_forecast(LATITUDE, LONGITUDE)
     snapshot_id = write(
         """INSERT INTO Pickup_Forecasts (student_id, place_label, latitude, longitude, forecast_date,
            max_temp_c, precip_probability) VALUES (%s,%s,%s,%s,%s,%s,%s)""",
-        (current_user()["student_id"], label, latitude, longitude, *values),
+        (current_user()["student_id"], PLACE, LATITUDE, LONGITUDE, *values),
     )
     return api(first(f"SELECT {FIELDS} FROM Pickup_Forecasts WHERE snapshot_id = %s", (snapshot_id,)), 201)

@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Confirm Ontario Tech email · ExtraCredit{% endblock %}
+{% block content %}
+<h1>Confirm your Ontario Tech email</h1>
+<p>Enter the ExtraCredit password you chose when you registered.</p>
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+<form class="stack narrow" method="post">
+    <input name="csrf_token" type="hidden" value="{{ csrf_token() }}">
+    <label>ExtraCredit password <input type="password" name="password" autocomplete="current-password" required maxlength="128"></label>
+    <button>Confirm email</button>
+</form>
+{% endblock %}

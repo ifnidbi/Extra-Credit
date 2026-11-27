@@ -3,7 +3,7 @@ from datetime import date
 from pathlib import Path
 from secrets import token_hex
 
-from flask import Flask
+from flask import Flask, request
 from flask.json.provider import DefaultJSONProvider
 from flask_wtf import CSRFProtect
 from flask_wtf.csrf import CSRFError
@@ -27,6 +27,14 @@ def create_app(test_config=None):
     app.json = AppJSON(app)
     app.config.from_mapping(
         SECRET_KEY=os.getenv("SECRET_KEY") or token_hex(32),
+        DEMO_MODE=os.getenv("DEMO_MODE", "").lower() == "true",
+        PUBLIC_URL=os.getenv("PUBLIC_URL", "http://127.0.0.1:5000"),
+        SMTP_HOST=os.getenv("SMTP_HOST", ""),
+        SMTP_PORT=int(os.getenv("SMTP_PORT", "587")),
+        SMTP_FROM=os.getenv("SMTP_FROM", ""),
+        SMTP_USERNAME=os.getenv("SMTP_USERNAME", ""),
+        SMTP_PASSWORD=os.getenv("SMTP_PASSWORD", ""),
+        VERIFICATION_OUTBOX=Path(app.instance_path) / "verification",
         DB_HOST=os.getenv("DB_HOST", "127.0.0.1"),
         DB_PORT=int(os.getenv("DB_PORT", "3306")),
         DB_NAME=os.getenv("DB_NAME", "extra_credit"),
@@ -53,6 +61,12 @@ def create_app(test_config=None):
     app.cli.add_command(seed_demo)
     for module in (site, accounts, catalog, inquiries, photos, reports, weather):
         app.register_blueprint(module.bp)
+
+    @app.after_request
+    def prevent_marketplace_caching(response):
+        if request.endpoint != "static":
+            response.headers["Cache-Control"] = "no-store"
+        return response
 
     @app.errorhandler(AppError)
     def app_error(error):

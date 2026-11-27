@@ -19,6 +19,8 @@ def app(tmp_path):
     name = f"extra_credit_test_{uuid4().hex}"
     app = create_app({
         "TESTING": True,
+        "DEMO_MODE": True,
+        "VERIFICATION_OUTBOX": tmp_path / "verification",
         "DB_NAME": name,
         "DB_HOST": os.getenv("TEST_DB_HOST", "127.0.0.1"),
         "DB_PORT": int(os.getenv("TEST_DB_PORT", "3306")),

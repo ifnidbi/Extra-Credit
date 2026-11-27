@@ -1,9 +1,10 @@
 from decimal import Decimal, InvalidOperation
 
-from flask import Blueprint, render_template, request
+from flask import Blueprint, current_app, render_template, request
 from mysql.connector import IntegrityError
 
 from .accounts import current_user, require_admin, require_login
+from .campus import CAMPUSES, DEMO_EMAILS, PICKUP_SPOTS, SCHOOL, STUDENT_DOMAIN
 from .common import AppError, api, form_data, invalid, positive_id, text
 from .db import first, rows, transaction, write
 
@@ -20,6 +21,16 @@ LISTING_SQL = """
     FROM Listings l JOIN Students s ON s.student_id = l.seller_id
     JOIN Categories c ON c.category_id = l.category_id
 """
+SELLER_SCOPE = "s.email_verified AND s.school_name = %s"
+
+
+def allowed_seller():
+    sql = SELLER_SCOPE + " AND (SUBSTRING_INDEX(s.email, '@', -1) = %s"
+    values = [SCHOOL, STUDENT_DOMAIN]
+    if current_app.config["DEMO_MODE"]:
+        sql += " OR s.email IN (" + ",".join(["%s"] * len(DEMO_EMAILS)) + ")"
+        values.extend(DEMO_EMAILS)
+    return sql + ")", values
 
 
 def list_categories():
@@ -52,15 +63,18 @@ def search_listings(args):
         invalid("currency", "Choose a listed currency.")
     if condition and condition not in CONDITIONS:
         invalid("condition", "Choose a listed condition.")
+    if campus and campus not in CAMPUSES:
+        invalid("campus", "Choose North Oshawa or Downtown Oshawa.")
 
-    filters = ["l.listing_status = 'Available'", "s.is_active"]
-    values = []
+    scope, values = allowed_seller()
+    filters = ["l.listing_status = 'Available'", "s.is_active", scope, "l.campus_name IN (%s, %s)"]
+    values.extend(CAMPUSES)
     if q:
         filters.append("(l.title LIKE %s ESCAPE '!' OR l.description LIKE %s ESCAPE '!')")
         values.extend((like_value(q), like_value(q)))
     if campus:
-        filters.append("l.campus_name LIKE %s ESCAPE '!'")
-        values.append(like_value(campus))
+        filters.append("l.campus_name = %s")
+        values.append(campus)
     if args.get("category_id"):
         filters.append("l.category_id = %s")
         values.append(positive_id(args["category_id"], "category_id"))
@@ -87,7 +101,9 @@ def search_listings(args):
 
 
 def get_listing(listing_id):
-    listing = first(LISTING_SQL + " WHERE l.listing_id = %s", (listing_id,))
+    scope, values = allowed_seller()
+    listing = first(LISTING_SQL + f" WHERE l.listing_id = %s AND l.campus_name IN (%s, %s) AND {scope}",
+                    (listing_id, *CAMPUSES, *values))
     user = current_user()
     privileged = listing and user and (listing["seller_id"] == user["student_id"] or user["role"] == "admin")
     if not listing or ((not listing["seller_active"] or listing["listing_status"] == "Removed") and not privileged):
@@ -102,6 +118,9 @@ def public_listing(listing):
 def validate_listing(data):
     currency = text(data, "currency_code", 3)
     condition = text(data, "item_condition", 20)
+    campus = text(data, "campus_name", 150)
+    if campus not in CAMPUSES:
+        invalid("campus_name", "Choose an Ontario Tech campus.")
     if currency not in CURRENCIES:
         invalid("currency_code", "Choose a listed currency.")
     if condition not in CONDITIONS:
@@ -112,16 +131,16 @@ def validate_listing(data):
     return (
         text(data, "title", 150), text(data, "description", 5000, required=False),
         price_value(data.get("price"), currency, "price"), currency, condition,
-        category_id, text(data, "campus_name", 150),
+        category_id, campus,
     )
 
 
 def lock_listing(listing_id, db):
     listing = first(
-        "SELECT listing_id, seller_id, listing_status FROM Listings WHERE listing_id = %s FOR UPDATE",
+        "SELECT listing_id, seller_id, listing_status, campus_name FROM Listings WHERE listing_id = %s FOR UPDATE",
         (listing_id,), db,
     )
-    if not listing:
+    if not listing or listing["campus_name"] not in CAMPUSES:
         raise AppError(404, "not_found", "Listing not found.")
     return listing
 
@@ -138,23 +157,28 @@ def check_editable(listing):
 
 
 @bp.get("/listings")
+@require_login
 def index():
     return render_template("listings.html", result=search_listings(request.args), categories=list_categories(),
-                           currencies=CURRENCIES, conditions=CONDITIONS)
+                           currencies=CURRENCIES, conditions=CONDITIONS, campuses=CAMPUSES)
 
 
 @bp.get("/listings/<int:listing_id>")
+@require_login
 def detail(listing_id):
     from .photos import listing_photos
 
-    return render_template("listing.html", listing=get_listing(listing_id), photos=listing_photos(listing_id))
+    listing = get_listing(listing_id)
+    return render_template("listing.html", listing=listing, photos=listing_photos(listing_id),
+                           pickup_spots=PICKUP_SPOTS[listing["campus_name"]])
 
 
 @bp.get("/dashboard")
 @require_login
 def dashboard():
-    listings = rows(LISTING_SQL + " WHERE l.seller_id = %s ORDER BY l.date_posted DESC, l.listing_id DESC",
-                    (current_user()["student_id"],))
+    listings = rows(LISTING_SQL + " WHERE l.seller_id = %s AND l.campus_name IN (%s, %s)"
+                    " ORDER BY l.date_posted DESC, l.listing_id DESC",
+                    (current_user()["student_id"], *CAMPUSES))
     return render_template("dashboard.html", listings=listings)
 
 
@@ -169,10 +193,12 @@ def editor(listing_id=None):
         check_owner(listing)
         check_editable(listing)
     return render_template("editor.html", listing=listing, categories=list_categories(), currencies=CURRENCIES,
-                           conditions=CONDITIONS, photos=listing_photos(listing_id) if listing else [])
+                           conditions=CONDITIONS, campuses=CAMPUSES,
+                           photos=listing_photos(listing_id) if listing else [])
 
 
 @bp.get("/api/listings")
+@require_login
 def search_api():
     result = search_listings(request.args)
     result["items"] = [public_listing(item) for item in result["items"]]
@@ -180,6 +206,7 @@ def search_api():
 
 
 @bp.get("/api/listings/<int:listing_id>")
+@require_login
 def detail_api(listing_id):
     return api(public_listing(get_listing(listing_id)))
 
@@ -210,6 +237,11 @@ def update_listing(listing_id):
             listing = lock_listing(listing_id, db)
             check_owner(listing)
             check_editable(listing)
+            if values[-1] != listing["campus_name"] and first(
+                "SELECT inquiry_id FROM Purchase_Inquiries WHERE listing_id = %s "
+                "AND inquiry_status IN ('Pending', 'Accepted') LIMIT 1 FOR UPDATE", (listing_id,), db,
+            ):
+                raise AppError(409, "pickup_pending", "The campus cannot change while a pickup is pending or accepted.")
             write(
                 """UPDATE Listings SET title=%s, description=%s, price=%s, currency_code=%s,
                    item_condition=%s, category_id=%s, campus_name=%s WHERE listing_id=%s""",
@@ -260,6 +292,7 @@ def categories_page():
 
 
 @bp.get("/api/categories")
+@require_login
 def categories_api():
     return api(list_categories())
 

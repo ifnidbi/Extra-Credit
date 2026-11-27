@@ -1,24 +1,37 @@
 from functools import wraps
 import re
 
-from flask import Blueprint, g, redirect, render_template, request, session, url_for
+from flask import Blueprint, current_app, g, redirect, render_template, request, session, url_for
 from mysql.connector import IntegrityError
 from werkzeug.security import check_password_hash, generate_password_hash
 
+from .campus import DEMO_EMAILS, SCHOOL, STUDENT_DOMAIN
 from .common import AppError, api, form_data, invalid, text
-from .db import first, write
+from .db import first, transaction, write
+from .verification import read_verification_token, send_verification
 
 bp = Blueprint("accounts", __name__)
 PROFILE = "student_id, full_name, email, school_name, role"
 
 
+def is_student_email(email):
+    return re.fullmatch(r"[^\s@<>]+@" + re.escape(STUDENT_DOMAIN), email) is not None
+
+
+def is_campus_account(user):
+    return user and user["school_name"] == SCHOOL and (
+        is_student_email(user["email"]) or (current_app.config["DEMO_MODE"] and user["email"] in DEMO_EMAILS)
+    )
+
+
 def current_user():
     if "viewer" not in g:
         student_id = session.get("student_id")
-        g.viewer = first(
-            f"SELECT {PROFILE} FROM Students WHERE student_id = %s AND is_active",
+        user = first(
+            f"SELECT {PROFILE} FROM Students WHERE student_id = %s AND is_active AND email_verified",
             (student_id,),
         ) if student_id else None
+        g.viewer = user if is_campus_account(user) else None
     return g.viewer
 
 
@@ -43,25 +56,24 @@ def require_admin(view):
     return wrapped
 
 
-def profile_fields(data):
-    return text(data, "full_name", 100), text(data, "school_name", 150)
-
-
 def register_account(data):
-    full_name, school = profile_fields(data)
+    full_name = text(data, "full_name", 100)
     email = text(data, "email", 150).lower()
-    if not re.fullmatch(r"[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+", email):
-        invalid("email", "Enter a valid email address.")
+    if not is_student_email(email):
+        invalid("email", "Use your Ontario Tech student email ending in @ontariotechu.net.")
     password = data.get("password", "")
     if not isinstance(password, str) or not 12 <= len(password) <= 128:
         invalid("password", "Enter a password between 12 and 128 characters.")
     if data.get("student_attested") != "yes":
-        invalid("student_attested", "Confirm that you are a student.")
+        invalid("student_attested", "Confirm that you are a current Ontario Tech student.")
     try:
-        write(
-            "INSERT INTO Students (full_name, email, password_hash, school_name) VALUES (%s, %s, %s, %s)",
-            (full_name, email, generate_password_hash(password), school),
-        )
+        password_hash = generate_password_hash(password)
+        with transaction() as db:
+            student_id = write(
+                "INSERT INTO Students (full_name, email, password_hash, school_name) VALUES (%s, %s, %s, %s)",
+                (full_name, email, password_hash, SCHOOL), db,
+            )
+            send_verification(student_id, email)
     except IntegrityError as error:
         if error.errno != 1062:
             raise
@@ -87,19 +99,44 @@ def login():
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
-        user = first("SELECT student_id, password_hash FROM Students WHERE email = %s AND is_active", (email,))
-        if user and len(password) <= 128 and check_password_hash(user["password_hash"], password):
-            session.clear()
-            session["student_id"] = user["student_id"]
-            return redirect(url_for("catalog.dashboard"))
         error = AppError(401, "invalid_login", "Check your email and password and try again.")
+        user = first(
+            "SELECT student_id, email, school_name, password_hash, email_verified FROM Students WHERE email = %s AND is_active",
+            (email,),
+        )
+        if is_campus_account(user) and len(password) <= 128 and check_password_hash(user["password_hash"], password):
+            if user["email_verified"]:
+                session.clear()
+                session["student_id"] = user["student_id"]
+                return redirect(url_for("catalog.index"))
+            error = AppError(403, "unverified", "Confirm your Ontario Tech email before signing in.")
+            if request.form.get("send_again") == "yes":
+                send_verification(user["student_id"], user["email"])
+                return redirect(url_for("accounts.login", registered=1))
     return render_template("auth.html", register=False, error=error), error.status if error else 200
+
+
+@bp.route("/verify-email/<token>", methods=["GET", "POST"])
+def verify_email(token):
+    student_id, email = read_verification_token(token)
+    error = None
+    if request.method == "POST":
+        user = first(
+            "SELECT student_id, password_hash FROM Students WHERE student_id = %s AND email = %s AND is_active",
+            (student_id, email),
+        )
+        password = request.form.get("password", "")
+        if is_student_email(email) and user and len(password) <= 128 and check_password_hash(user["password_hash"], password):
+            write("UPDATE Students SET email_verified = TRUE WHERE student_id = %s", (student_id,))
+            return redirect(url_for("accounts.login", verified=1))
+        error = "Enter the ExtraCredit password you chose when you registered."
+    return render_template("verify_email.html", error=error), 400 if error else 200, {"Referrer-Policy": "no-referrer"}
 
 
 @bp.post("/logout")
 def logout():
     session.clear()
-    return redirect(url_for("catalog.index"))
+    return redirect(url_for("accounts.login"))
 
 
 @bp.get("/account")
@@ -117,8 +154,8 @@ def account_api():
         return api(user)
     data = form_data()
     if request.method == "PUT":
-        name, school = profile_fields(data)
-        write("UPDATE Students SET full_name = %s, school_name = %s WHERE student_id = %s", (name, school, student_id))
+        name = text(data, "full_name", 100)
+        write("UPDATE Students SET full_name = %s WHERE student_id = %s", (name, student_id))
         return api(first(f"SELECT {PROFILE} FROM Students WHERE student_id = %s", (student_id,)))
     if user["role"] == "admin":
         raise AppError(403, "forbidden", "Demo administrators are managed locally.")

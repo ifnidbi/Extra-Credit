@@ -1,24 +1,30 @@
 {% extends "base.html" %}
 {% block title %}{{ 'Register' if register else 'Sign in' }} · ExtraCredit{% endblock %}
 {% block content %}
-<h1>{{ 'Create a student account' if register else 'Sign in' }}</h1>
+<h1>{{ 'Create an Ontario Tech account' if register else 'Ontario Tech student marketplace' }}</h1>
+<p>Buy and sell secondhand items for pickup at North Oshawa or Downtown Oshawa.</p>
 {% if request.args.get('registered') and not register %}
-<p role="status">Account created. Sign in to continue.</p>
+<p role="status">Check your Ontario Tech inbox for the confirmation link.</p>
+{% elif request.args.get('verified') and not register %}
+<p role="status">Email confirmed. Sign in to browse listings.</p>
 {% endif %}
 {% if error %}<p class="error" role="alert">{{ error.message }}</p>{% endif %}
 <form class="stack narrow" method="post">
     <input name="csrf_token" type="hidden" value="{{ csrf_token() }}">
     {% if register %}
         <label>Full name <input name="full_name" maxlength="100" autocomplete="name" required value="{{ request.form.get('full_name', '') }}"></label>
-        <label>School <input name="school_name" maxlength="150" autocomplete="organization" required value="{{ request.form.get('school_name', '') }}"></label>
     {% endif %}
-    <label>Email <input name="email" type="email" maxlength="150" autocomplete="email" required value="{{ request.form.get('email', '') }}"></label>
-    <label>Password <input name="password" type="password" autocomplete="{{ 'new-password' if register else 'current-password' }}"
+    <label>{{ 'Ontario Tech student email' if register else 'Email' }} <input name="email" type="email" maxlength="150" autocomplete="email" required value="{{ request.form.get('email', '') }}"></label>
+    <label>ExtraCredit password <input name="password" type="password" autocomplete="{{ 'new-password' if register else 'current-password' }}"
         {% if register %}minlength="12"{% endif %} maxlength="128" required></label>
     {% if register %}
         <label class="inline"><input name="student_attested" type="checkbox" value="yes" required
-            {% if request.form.get('student_attested') %}checked{% endif %}> I am a student.</label>
+            {% if request.form.get('student_attested') %}checked{% endif %}> I am a current Ontario Tech student.</label>
+        <p class="muted">Use your @ontariotechu.net email and choose a password for ExtraCredit.</p>
     {% endif %}
     <button>{{ 'Register' if register else 'Sign in' }}</button>
+    {% if error and error.code == 'unverified' %}
+        <button type="submit" name="send_again" value="yes">Resend confirmation email</button>
+    {% endif %}
 </form>
 {% endblock %}

@@ -14,8 +14,8 @@
     <nav aria-label="Main">
         {% set user = viewer() if not no_viewer else none %}
         <a class="brand" href="{{ url_for('catalog.index') }}">ExtraCredit</a>
-        <a href="{{ url_for('catalog.index') }}">Browse</a>
         {% if user %}
+            <a href="{{ url_for('catalog.index') }}">Browse</a>
             <a href="{{ url_for('catalog.dashboard') }}">My listings</a>
             <a href="{{ url_for('inquiries.page') }}">Inquiries</a>
             <a href="{{ url_for('weather.page') }}">Pickup weather</a>

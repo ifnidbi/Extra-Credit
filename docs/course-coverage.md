@@ -8,7 +8,7 @@ The progress audit found one implementation PR, [foundation #95](https://github.
 | --- | --- |
 | Rebuild relational schema, sample data and ER diagram | Schema files, FK checks, six or more fictional records in every table, updated relationship diagram, reproducible seed steps. |
 | Ten Phase II views | Preserve each requested query pattern and show results on two report pages. Record the MySQL full outer join equivalent and any TA feedback. |
-| Authentication, sessions, roles, input and errors | Demo guest, student and admin access. Show visible and refused actions, field messages, and stable responses during dependency failures. |
+| Authentication, sessions, roles, input and errors | Demo the guest gate, Ontario Tech email confirmation, and student and admin access. Show visible and refused actions, field messages, and stable responses during dependency failures. |
 | Web service, JSON, CRUD, external REST API | Show local GET, POST, PUT and DELETE on records, an external pickup-weather fetch and save, and both snapshot INSERT and SELECT. |
 | Frontend, forms, AJAX, charts, search | Browse, filter, and save listings without reloading. Show client-side validation, the MySQL chart, and all ten views as labeled HTML tables. |
 | CSV and PDF | Download, open, and check both formats for the same report data. |

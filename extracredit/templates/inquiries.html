@@ -13,7 +13,12 @@
     <p data-pickup>{{ inquiry.pickup_location }} · {{ inquiry.preferred_date }} · {{ inquiry.payment_method }}</p>
     {% if inquiry.inquiry_status == 'Pending' and direction == 'outgoing' %}
         <form class="stack narrow" data-pending data-api-form="/api/inquiries/{{ inquiry.inquiry_id }}" data-method="PUT" data-action="edit-inquiry">
-            <label>Pickup location <input name="pickup_location" value="{{ inquiry.pickup_location }}" maxlength="150" required></label>
+            <label>Pickup location
+                <select name="pickup_location" required>
+                    <option value="">Choose a campus pickup spot</option>
+                    {% for spot in pickup_spots[inquiry.campus_name] %}<option {% if inquiry.pickup_location == spot %}selected{% endif %}>{{ spot }}</option>{% endfor %}
+                </select>
+            </label>
             <label>Preferred date <input type="date" name="preferred_date" value="{{ inquiry.preferred_date }}" required></label>
             <label>Payment preference
                 <select name="payment_method">

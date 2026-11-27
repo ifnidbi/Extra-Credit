@@ -4,9 +4,9 @@
 <h1>Account</h1>
 {% set person = viewer() %}
 <p>{{ person.email }} · {{ person.role }}</p>
+<p>{{ person.school_name }}</p>
 <form class="stack narrow" data-api-form="/api/account" data-method="PUT" data-success="Profile updated.">
     <label>Full name <input name="full_name" maxlength="100" required value="{{ person.full_name }}"></label>
-    <label>School <input name="school_name" maxlength="150" required value="{{ person.school_name }}"></label>
     <button>Save profile</button>
     <p role="status" data-message></p>
 </form>
